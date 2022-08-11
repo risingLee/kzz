@@ -4,24 +4,90 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QDebug>
-#define MAXCOUNT 50
+#define DURATION 9682
+#define KUISERI 0.001
+#define YINGSERI 0.003
+#define MAXCOUNT 500
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
     m_currentSy = "SZ123123";
+    isBuy = false;
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(update()));
+    timer->start(1500);
+    initMoney = 10000;
 }
 
 void MainWindow::update()
 {
+    panKou();
+    //    showLog();
+    moniBs();
 
 }
 
+void MainWindow::moniBs()
+{
+    int ret = bsCal();
+    if(isBuy && pk.timestamp.toULongLong()-buytimes>DURATION)
+    {
+        if( (bPrice - pk.current) / bPrice >  KUISERI && ret != 1)
+        {
+            // q z s h
+            sPrice = pk.current;
+            initMoney += sPrice *10;
+            isBuy = false;
+            qDebug()<<"qzsh==>"<<"total:"<<initMoney<<"sp:"<<sPrice;
+            return;
+        }
+        if( (pk.current - bPrice  ) / bPrice >  YINGSERI)
+        {
+            // q z z y
+            sPrice = pk.current;
+            initMoney += sPrice *10;
+            isBuy = false;
+            qDebug()<<"qzzy==>"<<"total:"<<initMoney<<"sp:"<<sPrice;
+            return;
+        }
+    }
 
-void MainWindow::bsCal()
+    if (ret == 0)
+    {
+
+    }
+    else if(ret == 1)
+    {
+        if(isBuy == false)
+        {
+            isBuy =true;
+            bPrice = pk.current;
+            initMoney -= bPrice*10;
+            qDebug()<<"buy==>"<<"total:"<<initMoney<<"bp:"<<bPrice;
+            buytimes = pk.timestamp.toULongLong();
+        }
+    }
+    else if(ret == 2)
+    {
+        if(isBuy && pk.timestamp.toULongLong()-buytimes>DURATION)
+        {
+            if( (pk.current - bPrice  ) / bPrice >=  0)
+            {
+                // q z z y
+                sPrice = pk.current;
+                initMoney += sPrice *10;
+                isBuy = false;
+                qDebug()<<"wxyj==>"<<"total:"<<initMoney<<"sp:"<<sPrice;
+                return;
+            }
+        }
+    }
+
+}
+
+int MainWindow::bsCal()
 {
     double bcsum = pk.bc1+pk.bc2+pk.bc3+pk.bc4+pk.bc5;
     double scsum = pk.sc1+pk.sc2+pk.sc3+pk.sc4+pk.sc5;
@@ -33,7 +99,7 @@ void MainWindow::bsCal()
     bool bmax = false;
     for(int i = 0; i < lstbc.count(); ++i)
     {
-        if (lstbc[i] >= MAXCOUNT + 30)
+        if (lstbc[i] >= MAXCOUNT + 300)
         {
             bmax = true;
             break;
@@ -50,19 +116,19 @@ void MainWindow::bsCal()
     }
 
     if( smax && ! bmax)
-        qDebug()<<"[BBBBB]";
+        return 1;
     else if(bmax && !smax)
-        qDebug()<<"[SSSSS]";
+        return 2;
     else
-        qDebug()<<"[HHHHH]";
-//    qDebug()<<bcsum<<scsum<<bcsum-scsum;
+        return 0;
+    //    qDebug()<<bcsum<<scsum<<bcsum-scsum;
 }
 
 void MainWindow::showLog()
 {
     QDateTime time = QDateTime::fromMSecsSinceEpoch(pk.timestamp.toULongLong());
-//    qDebug()<<pk.symbol<<time;
-//    qDebug()<<pk.current;
+    //    qDebug()<<pk.symbol<<time;
+    //    qDebug()<<pk.current;
     qDebug()<<"====B5====";
     qDebug()<<"S5"<<pk.sp5<<pk.sc5;
     qDebug()<<"S4"<<pk.sp4<<pk.sc4;
@@ -75,7 +141,7 @@ void MainWindow::showLog()
     qDebug()<<"B3"<<pk.bp3<<pk.bc3;
     qDebug()<<"B4"<<pk.bp4<<pk.bc4;
     qDebug()<<"B5"<<pk.bp5<<pk.bc5;
-//    qDebug()<<"buypct:"<<pk.buypct<<"sellpct:"<<pk.sellpct<<"diff:"<<pk.diff<<"ratio:"<<pk.ratio;
+    //    qDebug()<<"buypct:"<<pk.buypct<<"sellpct:"<<pk.sellpct<<"diff:"<<pk.diff<<"ratio:"<<pk.ratio;
 }
 void MainWindow::panKou()
 {

@@ -67,8 +67,15 @@ private:
     Bs bs;
     int bda;
     int mda;
+    bool isBuy;
+    double initMoney;
+    double money;
+    qulonglong buytimes;
+    double bPrice;
+    double sPrice;
     QString m_currentSy;
-    void bsCal();
+    void moniBs();
+    int bsCal();
     void panKou();
     void showLog();
 };
