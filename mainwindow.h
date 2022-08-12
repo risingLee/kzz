@@ -87,7 +87,8 @@ private:
     void execute(bool isbuy, QString log);
     int bsCal();
     QString lastResult;
-    void savePankou();
+    QString fileName = QDate::currentDate().toString("yyyy-MM-dd")+".csv";
+    void savePankou(QString strResult);
     void panKou();
     void showLog();
 };

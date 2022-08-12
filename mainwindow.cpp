@@ -87,6 +87,7 @@ MainWindow::MainWindow(QWidget *parent) :
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(update()));
     initMoney = 10000;
+    savePankou("symbol,time,current,diff,sellpct,bp1,bc1,bp2,bc2,bp3,bc3,bp4,bc4,bp5,bc5,sp1,sc1,sp2,sc2,sp3,sc3,sp4,sc4,sp5,sc5");
 }
 
 void MainWindow::update()
@@ -94,7 +95,34 @@ void MainWindow::update()
     panKou();
     //    showLog();
     moniBs();
-    savePankou();
+    QDateTime time = QDateTime::fromMSecsSinceEpoch(pk.timestamp.toULongLong());
+    QString strResult = pk.symbol+","
+            +time.toString("yyyy-MM-dd hh:mm:ss")+","
+            +QString("%1,%2,%3,%4,%5,%6,%7,%8,%9,%10,%11,%12,%13,%14,%15,%16,%17,%18,%19,%20,%21,%22,%23\n")
+            .arg(pk.current)
+            .arg(pk.diff)
+            .arg(pk.sellpct)
+            .arg(pk.bp1)
+            .arg(pk.bc1)
+            .arg(pk.bp2)
+            .arg(pk.bc2)
+            .arg(pk.bp3)
+            .arg(pk.bc3)
+            .arg(pk.bp4)
+            .arg(pk.bc4)
+            .arg(pk.bp5)
+            .arg(pk.bc5)
+            .arg(pk.sp1)
+            .arg(pk.sc1)
+            .arg(pk.sp2)
+            .arg(pk.sc2)
+            .arg(pk.sp3)
+            .arg(pk.sc3)
+            .arg(pk.sp4)
+            .arg(pk.sc4)
+            .arg(pk.sp5)
+            .arg(pk.sc5);
+    savePankou(strResult);
 }
 
 void MainWindow::execute(bool isbuy, QString log)
@@ -232,39 +260,10 @@ int MainWindow::bsCal()
     //    qDebug()<<bcsum<<scsum<<bcsum-scsum;
 }
 
-void MainWindow::savePankou()
+void MainWindow::savePankou(QString strResult)
 {
-    QDateTime time = QDateTime::fromMSecsSinceEpoch(pk.timestamp.toULongLong());
-    QString strResult = pk.symbol+","
-            +time.toString("yyyy-MM-dd hh:mm:ss")+","
-            +QString("%1,%2,%3,%4,%5,%6,%7,%8,%9,%10,%11,%12,%13,%14,%15,%16,%17,%18,%19,%20,%21,%22,%23\n")
-            .arg(pk.current)
-            .arg(pk.diff)
-            .arg(pk.sellpct)
-            .arg(pk.bp1)
-            .arg(pk.bp2)
-            .arg(pk.bp3)
-            .arg(pk.bp4)
-            .arg(pk.bp5)
-            .arg(pk.bc1)
-            .arg(pk.bc2)
-            .arg(pk.bc3)
-            .arg(pk.bc4)
-            .arg(pk.bc5)
-            .arg(pk.sp1)
-            .arg(pk.sp2)
-            .arg(pk.sp3)
-            .arg(pk.sp4)
-            .arg(pk.sp5)
-            .arg(pk.sc1)
-            .arg(pk.sc2)
-            .arg(pk.sc3)
-            .arg(pk.sc4)
-            .arg(pk.sc5);
-
     if(lastResult != strResult)
     {
-        QString fileName = QDate::currentDate().toString("yyyy-MM-dd")+".csv";
         QFile file(fileName);
         file.open(QIODevice::WriteOnly|QIODevice::Append);
         file.write(strResult.toLatin1().data());
