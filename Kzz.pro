@@ -34,3 +34,4 @@ HEADERS += \
 
 FORMS += \
         mainwindow.ui
+DESTDIR = .\bin

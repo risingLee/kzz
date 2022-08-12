@@ -84,7 +84,10 @@ private:
     double sPrice;
     QString m_currentSy;
     void moniBs();
+    void execute(bool isbuy, QString log);
     int bsCal();
+    QString lastResult;
+    void savePankou();
     void panKou();
     void showLog();
 };

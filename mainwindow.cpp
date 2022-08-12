@@ -3,6 +3,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QFile>
 #include <QDebug>
 #include <QTextCodec>
 #define DURATION 9682
@@ -36,6 +37,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    this->move(1500,700);
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
 
 
@@ -92,23 +94,39 @@ void MainWindow::update()
     panKou();
     //    showLog();
     moniBs();
+    savePankou();
+}
 
+void MainWindow::execute(bool isbuy, QString log)
+{
+    if(!isbuy)
+    {
+        DD_key(109, 1);
+        DD_key(109, 2);
+    }
+    else
+    {
+        DD_key(108, 1);
+        DD_key(108, 2);
+    }
+    ui->plainTextEdit->appendPlainText(log);
 }
 
 void MainWindow::moniBs()
 {
     int ret = bsCal();
+    QString log = "";
     if(isBuy && pk.timestamp.toULongLong()-buytimes>DURATION)
     {
-        if( (bPrice - pk.current) / bPrice >  KUISERI && ret != 1)
+        if( (bPrice - pk.current) / bPrice >  KUISERI)
         {
             // q z s h
             sPrice = pk.current;
             initMoney += sPrice *10;
-            DD_key(109, 1);
-            DD_key(109, 2);
+
             isBuy = false;
-            qDebug()<<"qzsh==>"<<"total:"<<initMoney<<"sp:"<<sPrice;
+            log = "qzsh==>"+QString("total:%1").arg(initMoney)+QString("sp:%1").arg(sPrice);
+            execute(isBuy,log);
             return;
         }
         if( (pk.current - bPrice  ) / bPrice >  YINGSERI)
@@ -116,10 +134,9 @@ void MainWindow::moniBs()
             // q z z y
             sPrice = pk.current;
             initMoney += sPrice *10;
-            DD_key(109, 1);
-            DD_key(109, 2);
             isBuy = false;
-            qDebug()<<"qzzy==>"<<"total:"<<initMoney<<"sp:"<<sPrice;
+            log = "qzzy==>"+QString("total:%1").arg(initMoney)+QString("sp:%1").arg(sPrice);
+            execute(isBuy,log);
             return;
         }
     }
@@ -135,9 +152,8 @@ void MainWindow::moniBs()
             isBuy =true;
             bPrice = pk.current;
             initMoney -= bPrice*10;
-            DD_key(108, 1);
-            DD_key(108, 2);
-            qDebug()<<"buy==>"<<"total:"<<initMoney<<"bp:"<<bPrice;
+            log = "buy==>"+QString("total:%1").arg(initMoney)+QString("bp:%1").arg(bPrice);
+            execute(isBuy,log);
             buytimes = pk.timestamp.toULongLong();
         }
     }
@@ -151,30 +167,32 @@ void MainWindow::moniBs()
                 sPrice = pk.current;
                 initMoney += sPrice *10;
                 isBuy = false;
-                qDebug()<<"wxyj==>"<<"total:"<<initMoney<<"sp:"<<sPrice;
+                log = "wxyj==>"+QString("total:%1").arg(initMoney)+QString("sp:%1").arg(sPrice);
+                execute(isBuy,log);
                 return;
             }
         }
     }
-//    DD_key(107, 1);
+    //    DD_key(107, 1);
 
-//    DD_key(107, 2);
+    //    DD_key(107, 2);
 
-//    m_hnd = NULL;
-//    m_title = "确定";
-//    findWinds(hd);
-//    WId wid1 = (WId)m_hnd;
+    //    m_hnd = NULL;
+    //    m_title = "确定";
+    //    findWinds(hd);
+    //    WId wid1 = (WId)m_hnd;
 
-//    if(wid1!=NULL)
-//    {
+    //    if(wid1!=NULL)
+    //    {
 
-//        //窗口置顶
-//        ::SetWindowPos(m_hnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-//        ::SwitchToThisWindow(m_hnd,true);
-//        DD_key(815, 1);
-//        Sleep(50);
-//        DD_key(815, 2);
-//    }
+    //        //窗口置顶
+    //        ::SetWindowPos(m_hnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    //        ::SwitchToThisWindow(m_hnd,true);
+    //        DD_key(815, 1);
+    //        Sleep(50);
+    //        DD_key(815, 2);
+    //    }
+    ui->lineEdit->setText(QString("%1").arg(pk.current));
 }
 
 int MainWindow::bsCal()
@@ -212,6 +230,47 @@ int MainWindow::bsCal()
     else
         return 0;
     //    qDebug()<<bcsum<<scsum<<bcsum-scsum;
+}
+
+void MainWindow::savePankou()
+{
+    QDateTime time = QDateTime::fromMSecsSinceEpoch(pk.timestamp.toULongLong());
+    QString strResult = pk.symbol+","
+            +time.toString("yyyy-MM-dd hh:mm:ss")+","
+            +QString("%1,%2,%3,%4,%5,%6,%7,%8,%9,%10,%11,%12,%13,%14,%15,%16,%17,%18,%19,%20,%21,%22,%23\n")
+            .arg(pk.current)
+            .arg(pk.diff)
+            .arg(pk.sellpct)
+            .arg(pk.bp1)
+            .arg(pk.bp2)
+            .arg(pk.bp3)
+            .arg(pk.bp4)
+            .arg(pk.bp5)
+            .arg(pk.bc1)
+            .arg(pk.bc2)
+            .arg(pk.bc3)
+            .arg(pk.bc4)
+            .arg(pk.bc5)
+            .arg(pk.sp1)
+            .arg(pk.sp2)
+            .arg(pk.sp3)
+            .arg(pk.sp4)
+            .arg(pk.sp5)
+            .arg(pk.sc1)
+            .arg(pk.sc2)
+            .arg(pk.sc3)
+            .arg(pk.sc4)
+            .arg(pk.sc5);
+
+    if(lastResult != strResult)
+    {
+        QString fileName = QDate::currentDate().toString("yyyy-MM-dd")+".csv";
+        QFile file(fileName);
+        file.open(QIODevice::WriteOnly|QIODevice::Append);
+        file.write(strResult.toLatin1().data());
+        file.close();
+    }
+    lastResult = strResult;
 }
 
 void MainWindow::showLog()
