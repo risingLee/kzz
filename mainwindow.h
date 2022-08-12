@@ -3,7 +3,10 @@
 
 #include <QMainWindow>
 #include <QTimer>
+#include <QWindow>
+#include "windows.h"
 #include "httprequest.h"
+#pragma comment(lib, "user32.lib")
 namespace Ui {
 class MainWindow;
 }
@@ -61,6 +64,12 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    HMODULE hDll;
+    QString m_title;
+    HWND m_hnd;
+    HWND m_sxhnd;
+    HWND hd = GetDesktopWindow();
+    HWND findWinds(HWND hd);
     QTimer * timer;
     HttpRequest req;
     Pk pk;

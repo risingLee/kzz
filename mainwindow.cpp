@@ -4,20 +4,86 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QDebug>
+#include <QTextCodec>
 #define DURATION 9682
-#define KUISERI 0.001
+#define KUISERI 0.003
 #define YINGSERI 0.003
 #define MAXCOUNT 500
+
+#include <Psapi.h>
+#pragma comment(lib, "user32.lib")
+using namespace std;
+typedef int(*pDD_btn)(int btn);
+typedef int(*pDD_whl)(int whl);
+typedef int(*pDD_key)(int keycode, int flag);
+typedef int(*pDD_mov)(int x, int y);
+typedef int(*pDD_str)(char *str);
+typedef int(*pDD_todc)(int vk);
+typedef int(*pDD_movR)(int dx, int dy);
+
+pDD_btn      DD_btn;          //Mouse button
+pDD_whl      DD_whl;		     //Mouse wheel
+pDD_key      DD_key;		     //Mouse move abs.
+pDD_mov    DD_mov;		 //Mouse move rel.
+pDD_str       DD_str;			 //Keyboard
+pDD_todc    DD_todc;		 //Input visible char
+pDD_movR   DD_movR;
+
+
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+
+
+    m_hnd = NULL;
+    m_title = "双向快捷交易";
+    findWinds(hd);
+    WId wid1 = (WId)m_hnd;
+
+    if(wid1!=NULL)
+    {
+        m_sxhnd = m_hnd;
+        //窗口置顶
+        ::SetWindowPos(m_sxhnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        ::SwitchToThisWindow(m_sxhnd,true);
+    }
+    hDll = LoadLibraryW(L"DD96699.64.dll");
+    if (hDll == nullptr)
+    {
+        this->close() ;
+    }
+
+    DD_btn = (pDD_btn)GetProcAddress(hDll, "DD_btn");
+    DD_whl = (pDD_whl)GetProcAddress(hDll, "DD_whl");
+    DD_key = (pDD_key)GetProcAddress(hDll, "DD_key");
+    DD_mov = (pDD_mov)GetProcAddress(hDll, "DD_mov");
+    DD_str = (pDD_str)GetProcAddress(hDll, "DD_str");
+    DD_todc = (pDD_todc)GetProcAddress(hDll, "DD_todc");
+    DD_movR = (pDD_movR)GetProcAddress(hDll, "DD_movR");
+
+
+    if (!(DD_btn && DD_whl && DD_key && DD_mov && DD_str  && DD_todc && DD_movR))
+    {
+        qDebug()<<"error";
+        this->close() ;
+    }
+
+    int st = DD_btn(9884625);
+
+    if (st != 1)
+    {
+        //DD Initialize Error
+        this->close() ;
+    }
+
     m_currentSy = "SZ123123";
     isBuy = false;
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(update()));
-    timer->start(1500);
     initMoney = 10000;
 }
 
@@ -39,6 +105,8 @@ void MainWindow::moniBs()
             // q z s h
             sPrice = pk.current;
             initMoney += sPrice *10;
+            DD_key(109, 1);
+            DD_key(109, 2);
             isBuy = false;
             qDebug()<<"qzsh==>"<<"total:"<<initMoney<<"sp:"<<sPrice;
             return;
@@ -48,6 +116,8 @@ void MainWindow::moniBs()
             // q z z y
             sPrice = pk.current;
             initMoney += sPrice *10;
+            DD_key(109, 1);
+            DD_key(109, 2);
             isBuy = false;
             qDebug()<<"qzzy==>"<<"total:"<<initMoney<<"sp:"<<sPrice;
             return;
@@ -65,6 +135,8 @@ void MainWindow::moniBs()
             isBuy =true;
             bPrice = pk.current;
             initMoney -= bPrice*10;
+            DD_key(108, 1);
+            DD_key(108, 2);
             qDebug()<<"buy==>"<<"total:"<<initMoney<<"bp:"<<bPrice;
             buytimes = pk.timestamp.toULongLong();
         }
@@ -84,7 +156,25 @@ void MainWindow::moniBs()
             }
         }
     }
+//    DD_key(107, 1);
 
+//    DD_key(107, 2);
+
+//    m_hnd = NULL;
+//    m_title = "确定";
+//    findWinds(hd);
+//    WId wid1 = (WId)m_hnd;
+
+//    if(wid1!=NULL)
+//    {
+
+//        //窗口置顶
+//        ::SetWindowPos(m_hnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+//        ::SwitchToThisWindow(m_hnd,true);
+//        DD_key(815, 1);
+//        Sleep(50);
+//        DD_key(815, 2);
+//    }
 }
 
 int MainWindow::bsCal()
@@ -181,10 +271,41 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
+HWND MainWindow::findWinds(HWND hd)
+{
+    hd = GetWindow(hd, GW_CHILD);        //得到屏幕上第一个子窗口
+    char s[200] = { 0 };
+    while (hd != NULL)                    //循环得到所有的子窗口
+    {
+        memset(s, 0, 200);
+        GetWindowTextA(hd, s, 200);
+        QString str = QString::fromLocal8Bit(s);//QString::fromLocal8Bit(s);
+        if(str == m_title)
+        {
+            qDebug()<<str;
+            m_hnd = hd;
+            return hd;
+        }
+        findWinds(hd);
+        hd = GetNextWindow(hd, GW_HWNDNEXT);
+    }
 
+    return hd;
+}
 void MainWindow::on_pbPankou_clicked()
 {
-    panKou();
-    showLog();
-    bsCal();
+    if(ui->pbPankou->text() == "start")
+    {
+        timer->start(1000);
+        ui->pbPankou->setText("stop");
+        //窗口置顶
+        ::SetWindowPos(m_sxhnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        ::SwitchToThisWindow(m_sxhnd,true);
+    }
+    else
+    {
+        timer->stop();
+        ui->pbPankou->setText("start");
+        ::SetWindowPos(m_sxhnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    }
 }
