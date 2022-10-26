@@ -7,9 +7,9 @@
 #include <QDebug>
 #include <QTextCodec>
 #define DURATION 9682
-#define KUISERI 0.003
-#define YINGSERI 0.003
-#define MAXCOUNT 500
+#define KUISERI 0.001
+#define YINGSERI 0.001
+#define MAXCOUNT 1200
 
 #include <Psapi.h>
 #pragma comment(lib, "user32.lib")
@@ -37,7 +37,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    this->move(1500,700);
+    this->move(1500,500);
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
 
 
@@ -92,7 +92,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
 void MainWindow::update()
 {
-    panKou();
+
+    //窗口置顶
+
+    ::SetWindowPos(m_sxhnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    ::SwitchToThisWindow(m_sxhnd,true);
+        panKou();
     //    showLog();
     moniBs();
     QDateTime time = QDateTime::fromMSecsSinceEpoch(pk.timestamp.toULongLong());
@@ -130,11 +135,14 @@ void MainWindow::execute(bool isbuy, QString log)
     if(!isbuy)
     {
         DD_key(109, 1);
+        Sleep(10);
         DD_key(109, 2);
+
     }
     else
     {
         DD_key(108, 1);
+         Sleep(10);
         DD_key(108, 2);
     }
     ui->plainTextEdit->appendPlainText(log);
@@ -189,8 +197,8 @@ void MainWindow::moniBs()
     {
         if(isBuy && pk.timestamp.toULongLong()-buytimes>DURATION)
         {
-            if( (pk.current - bPrice  ) / bPrice >=  0)
-            {
+//            if( (pk.current - bPrice  ) / bPrice >=  0)
+//            {
                 // q z z y
                 sPrice = pk.current;
                 initMoney += sPrice *10;
@@ -198,7 +206,7 @@ void MainWindow::moniBs()
                 log = "wxyj==>"+QString("total:%1").arg(initMoney)+QString("sp:%1").arg(sPrice);
                 execute(isBuy,log);
                 return;
-            }
+//            }
         }
     }
     //    DD_key(107, 1);
@@ -235,7 +243,7 @@ int MainWindow::bsCal()
     bool bmax = false;
     for(int i = 0; i < lstbc.count(); ++i)
     {
-        if (lstbc[i] >= MAXCOUNT + 300)
+        if (lstbc[i] >= MAXCOUNT - 400)
         {
             bmax = true;
             break;
